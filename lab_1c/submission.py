@@ -13,7 +13,7 @@ from IPython.utils.sysinfo import pkg_commit_hash
 class LoginRequestPacket(PacketType):
     DEFINITION_IDENTIFIER = "ClientLoginRequest"
     DEFINITION_VERSION = "1.0"
-    FIELDS=[("usrname",BUFFER),("passwd",BUFFER)]
+    FIELDS=[("usrname",STRING),("passwd",STRING)]
     
 
 class ConfirmedAnswerPacket(PacketType):
@@ -64,17 +64,13 @@ class CreatOperationRequestPacket():
 
     
 class ClientProtocol(Protocol):   #protocol type is required
-    def __init__(self, LoginPacket):    #A 
-        self.pkg = LoginPacket
+    def __init__(self):    #A 
                 #serialize data transfer to message
         self.transport=None
         self.deserializer=PacketType.Deserializer()
     def connection_made(self, transport):     # Send message via transport.write
         print("Client:    Connection created!")
-        print("Client:    Logging in packet transported!")
-        self.data = self.pkg.__serialize__()
         self.transport = transport
-        self.transport.write(self.data)
         
         
 
@@ -90,8 +86,14 @@ class ClientProtocol(Protocol):   #protocol type is required
                 self.data = ORPpacket.__serialize__()
                 self.transport.write(self.data)
                 
-            
-            
+    def Login(self,usrname,passwd):
+        lrp = LoginRequestPacket()
+        lrp.usrname = usrname
+        lrp.passwd = passwd
+        self.data = lrp.__serialize__()
+        self.transport.write(self.data)
+                
+    
 
     def connection_lost(self, exc):
         print('Connection stopped because {}'.format(exc))
@@ -103,9 +105,10 @@ class ServerProtocol(Protocol):
         self.deserializer = PacketType.Deserializer()
     def connection_made(self, transport):
         self.transport = transport
+        self.state=1;
     
     def verifiedfunc(self, usrname, passwd):
-        if usrname==b"wwz" and passwd==b"hellowwz":
+        if usrname=="wwz" and passwd=="hellowwz":
             return True
         else:
             return False
@@ -115,42 +118,40 @@ class ServerProtocol(Protocol):
         self.deserializer.update(data)
         for pkg in self.deserializer.nextPackets():
             # logic section 
-            if isinstance(pkg, LoginRequestPacket):
+            if self.state==1 and isinstance(pkg, LoginRequestPacket):
+                self.state+=1
                 print("Server:    Logging in request packet received!")
-                print("Server:    Confirmed Answer Packet transported!")
                 if self.verifiedfunc(pkg.usrname, pkg.passwd):
+                    print("Server:    Confirmed Answer Packet transported!")
                     CAP = CreatConfirmedAnswerPacket(True, "sessionid0987")
                     CAPpkg = CAP.createPacket()
                     self.data=CAPpkg.__serialize__()
                     self.transport.write(self.data)
-                else: 
-                    try:
-                        self.transport.close()
-                    except:
-                        print("Invalid passwd and usrname!")
-            if isinstance(pkg, OperationRequestPacket):
+                else:
+                    #self.transport.close()
+                    print("Invalid usrname or passwd!")
+                    print("Connection Closed!")
+                    
+            elif self.state==2 and isinstance(pkg, OperationRequestPacket):
                 print("Server:    Operation Request Packet received!")
                 print("Server:    Logging in Successfully!")
-            
-            
+            else:
+                #self.transport.close()
+                pass
     def connection_lost(self, exc):
         print('Connection stopped because {}'.format(exc))
 
     
 def basicUnitTest(): 
-
-    lgpkg = LoginRequestPacket();
-    lgpkg.usrname=b"wwz"
-    lgpkg.passwd=b"hellowwz"
-    
     # Build a MockConnection between Client and Server
     set_event_loop(TestLoopEx())
-    client = ClientProtocol(lgpkg)       #sending data from the protocol
+    client = ClientProtocol()       #sending data from the protocol
     server = ServerProtocol()
     transportToServer = MockTransportToProtocol(server)
     transportToClient = MockTransportToProtocol(client)
     server.connection_made(transportToClient)
     client.connection_made(transportToServer)
+    client.Login("wwz", "hellowwz")
     
 if __name__=='__main__':
     basicUnitTest()
