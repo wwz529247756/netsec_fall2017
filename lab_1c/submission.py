@@ -147,8 +147,10 @@ def basicUnitTest():
     set_event_loop(TestLoopEx())
     client = ClientProtocol()       #sending data from the protocol
     server = ServerProtocol()
-    transportToServer = MockTransportToProtocol(server)
-    transportToClient = MockTransportToProtocol(client)
+    transportToServer = MockTransportToProtocol(myProtocol=client)
+    transportToClient = MockTransportToProtocol(myProtocol=server)
+    transportToServer.setRemoteTransport(transportToClient)
+    transportToClient.setRemoteTransport(transportToServer)
     server.connection_made(transportToClient)
     client.connection_made(transportToServer)
     client.Login("wwz", "hellowwz")
