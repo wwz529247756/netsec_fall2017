@@ -112,7 +112,8 @@ class FirstUnderLayerProtocol(StackingProtocol):
     def connection_made(self,transport):
         self.transport=transport
         print("Layer 1 connected")
-        self.higherProtocol().connection_made(self.transport)
+        higherTransport = StackingTransport(self.transport)
+        self.higherProtocol().connection_made(higherTransport)
         
     def data_received(self,data):
         print("Data received by FIRST layer!")
@@ -130,7 +131,8 @@ class SecondUnderLayerProtocol(StackingProtocol):
     def connection_made(self,transport):
         self.transport=transport
         print("Layer 2 connected")
-        self.higherProtocol().connection_made(self.transport)
+        higherTransport= StackingTransport(self.transport)
+        self.higherProtocol().connection_made(higherTransport)
 
     
     def data_received(self,data):
@@ -147,7 +149,6 @@ if __name__=='__main__':
     ptConnector = playground.Connector(protocolStack=f)
     playground.setConnector('passthrough', ptConnector)
     coro = playground.getConnector('passthrough').create_playground_server(lambda:ServerProtocol(),8000)
-    #mystacktransport = StackingTransport()
     myserver= loop.run_until_complete(coro)
     loop.run_forever()
     myserver.close()
