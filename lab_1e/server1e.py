@@ -125,13 +125,11 @@ class FirstUnderLayerProtocol(StackingProtocol):
 
 class SecondUnderLayerProtocol(StackingProtocol):
     def __init__(self):
-        self.connectionstatus = False
         super().__init__
         
     def connection_made(self,transport):
         self.transport=transport
         print("Layer 2 connected")
-        self.connectionstatus = True
         self.higherProtocol().connection_made(self.transport)
 
     
